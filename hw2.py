@@ -36,51 +36,23 @@ class SarcasmDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, index):
-        """
-        Returns a dictionary containing:
-            - input_ids: (max_length,) Tensor of token IDs 
-            - attention_mask: (max_length,) Tensor for attention masking
-            - label: (1,) Tensor containing the label
-        """
         item = self.data[index]
         text = item['headline']
         label = item['is_sarcastic']
         
-        kwargs = {
-            'text': text,
-            'add_special_tokens': True,
-            'max_length': self.max_length,
-            'padding': 'max_length',
-            'truncation': True,
-            'return_attention_mask': True,
-            'return_tensors': 'pt'
-        }
+        encoding = self.tokenizer(
+            text,
+            add_special_tokens=True,
+            max_length=self.max_length,
+            padding='max_length',
+            truncation=True,
+            return_attention_mask=True,
+            return_tensors='pt'
+        )
         
-        try:
-            encoding = self.tokenizer.encode_plus(**kwargs)
-        except AttributeError:
-            encoding = self.tokenizer(**kwargs)
-        
-        input_ids = encoding['input_ids'].flatten()
-        attention_mask = encoding['attention_mask'].flatten()
-        
-        curr_len = input_ids.shape[0]
-        
-        if curr_len > self.max_length:
-            input_ids = input_ids[:self.max_length]
-            attention_mask = attention_mask[:self.max_length]
-        elif curr_len < self.max_length:
-            pad_len = self.max_length - curr_len
-            
-            input_pad = torch.zeros(pad_len, dtype=input_ids.dtype)
-            mask_pad = torch.zeros(pad_len, dtype=attention_mask.dtype)
-            
-            input_ids = torch.cat((input_ids, input_pad))
-            attention_mask = torch.cat((attention_mask, mask_pad))
-
         return {
-            'input_ids': input_ids,
-            'attention_mask': attention_mask,
+            'input_ids': encoding['input_ids'].flatten(),
+            'attention_mask': encoding['attention_mask'].flatten(),
             'label': torch.tensor([label], dtype=torch.long)
         }
 
@@ -177,7 +149,7 @@ if __name__ == "__main__":
         valid_dataset = SarcasmDataset(valid_data, tokenizer, max_length=64)
         
         # Create DataLoaders
-        batch_size = 32  # Change batch size if needed
+        batch_size = 32 # Change batch size if needed
 
         # DO NOT CHANGE THE FOLLOWING LINES
         if int(os.environ.get("GS_TESTING_BATCH_SIZE", "0")) > 0:
