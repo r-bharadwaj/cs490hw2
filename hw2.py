@@ -31,21 +31,6 @@ class SarcasmDataset(Dataset):
         self.data = data
         self.tokenizer = tokenizer
         self.max_length = max_length
-        
-        texts = [item['headline'] for item in data]
-        labels = [item['is_sarcastic'] for item in data]
-        
-        self.encodings = self.tokenizer(
-            texts,
-            add_special_tokens=True,
-            max_length=self.max_length,
-            padding='max_length',
-            truncation=True,
-            return_attention_mask=True,
-            return_tensors='pt'
-        )
-        
-        self.labels = torch.tensor(labels, dtype=torch.long)
 
     def __len__(self):
         return len(self.data)
@@ -57,10 +42,24 @@ class SarcasmDataset(Dataset):
             - attention_mask: (max_length,) Tensor for attention masking
             - label: (1,) Tensor containing the label
         """
+        item = self.data[index]
+        text = item['headline']
+        label = item['is_sarcastic']
+        
+        encoding = self.tokenizer(
+            text,
+            add_special_tokens=True,
+            max_length=self.max_length,
+            padding='max_length',
+            truncation=True,
+            return_attention_mask=True,
+            return_tensors='pt'
+        )
+        
         return {
-            'input_ids': self.encodings['input_ids'][index],
-            'attention_mask': self.encodings['attention_mask'][index],
-            'label': self.labels[index].unsqueeze(0)  # Shape (1,)
+            'input_ids': encoding['input_ids'].flatten(),
+            'attention_mask': encoding['attention_mask'].flatten(),
+            'label': torch.tensor([label], dtype=torch.long)
         }
 
 # --- Model Class ---
